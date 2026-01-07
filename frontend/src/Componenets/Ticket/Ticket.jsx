@@ -5,6 +5,7 @@ import {
   fetchAdminTickets,
   assignTicket,
 } from "../../features/ticketSlice";
+import { fetchDepartments } from "../../features/departmentSlice";
 
 export default function Ticket({ isAdmin = false }) {
   const dispatch = useDispatch();
@@ -13,14 +14,23 @@ export default function Ticket({ isAdmin = false }) {
     loading,
     error,
   } = useSelector((state) => state.tickets);
-  const { departments = [] } = useSelector((state) => state.departments);
+  
+  const { 
+    departments = [], 
+    loading: deptLoading,
+    error: deptError 
+  } = useSelector((state) => state.departments);
 
   const [expandedTicket, setExpandedTicket] = useState(null);
   const [assignedDept, setAssignedDept] = useState({});
 
   useEffect(() => {
-    if (isAdmin) dispatch(fetchAdminTickets());
-    else dispatch(fetchMyTickets());
+    if (isAdmin) {
+      dispatch(fetchAdminTickets());
+      dispatch(fetchDepartments());
+    } else {
+      dispatch(fetchMyTickets());
+    }
   }, [dispatch, isAdmin]);
 
   const toggleExpand = (ticketNo) => {
@@ -28,6 +38,10 @@ export default function Ticket({ isAdmin = false }) {
   };
 
   const handleAssign = (ticketId, deptId) => {
+    if (!deptId) {
+      alert("Please select a department!");
+      return;
+    }
     setAssignedDept((prev) => ({ ...prev, [ticketId]: deptId }));
     dispatch(assignTicket({ ticketId, departmentId: deptId }));
   };
@@ -35,14 +49,18 @@ export default function Ticket({ isAdmin = false }) {
   const truncateDescription = (desc) =>
     desc ? (desc.length > 50 ? desc.slice(0, 50) + "..." : desc) : "";
 
-  if (loading) return <p>Loading tickets...</p>;
-  if (error) return <p className="text-danger">Error: {error}</p>;
-  if (!tickets || tickets.length === 0) return <p>No tickets submitted yet.</p>;
+  if (loading) return <p className="text-center">Loading tickets...</p>;
+  if (error) return <p className="text-danger text-center">Error: {error}</p>;
+  if (!tickets || tickets.length === 0) {
+    return <p className="text-center text-muted">No tickets submitted yet.</p>;
+  }
 
   const statusBadgeClass = (status) => {
     switch (status) {
       case "Open":
         return "badge bg-success";
+      case "Assigned":
+        return "badge bg-info"; // ✅ Added Assigned status
       case "In Progress":
         return "badge bg-warning text-dark";
       case "Closed":
@@ -52,8 +70,13 @@ export default function Ticket({ isAdmin = false }) {
     }
   };
 
+  const departmentsList = Array.isArray(departments) ? departments : [];
+
   return (
     <div className="container my-4">
+      {deptLoading && <p className="text-muted text-center">Loading departments...</p>}
+      {deptError && <p className="text-warning text-center">⚠️ {deptError}</p>}
+      
       {tickets.map((ticket) => (
         <div key={ticket._id} className="card mb-3 shadow-sm">
           <div className="card-body">
@@ -72,6 +95,7 @@ export default function Ticket({ isAdmin = false }) {
 
             <p className="mb-1">
               <strong>Ticket No:</strong> {ticket.ticketNo || "N/A"} |{" "}
+              <strong>Category:</strong> {ticket.category || "N/A"} |{" "}
               <strong>Submitted:</strong>{" "}
               {ticket.createdAt
                 ? new Date(ticket.createdAt).toLocaleString()
@@ -83,22 +107,44 @@ export default function Ticket({ isAdmin = false }) {
                 <label className="form-label fw-semibold">
                   Assign Department:
                 </label>
-                <select
-                  className="form-select"
-                  value={
-                    assignedDept[ticket._id] ||
-                    ticket.assignedDepartment?._id ||
-                    ""
-                  }
-                  onChange={(e) => handleAssign(ticket._id, e.target.value)}
-                >
-                  <option value="">Select Department</option>
-                  {departments.map((dept) => (
-                    <option key={dept._id} value={dept._id}>
-                      {dept.name}
+                <div className="d-flex gap-2">
+                  <select
+                    className="form-select"
+                    value={
+                      assignedDept[ticket._id] ||
+                      ticket.assignedDepartment?._id ||
+                      ""
+                    }
+                    onChange={(e) => setAssignedDept((prev) => ({
+                      ...prev,
+                      [ticket._id]: e.target.value
+                    }))}
+                    disabled={departmentsList.length === 0 || ticket.status === "Closed"}
+                  >
+                    <option value="">
+                      {departmentsList.length === 0 
+                        ? "No departments available" 
+                        : "Select Department"}
                     </option>
-                  ))}
-                </select>
+                    {departmentsList.map((dept) => (
+                      <option key={dept._id} value={dept._id}>
+                        {dept.name}
+                      </option>
+                    ))}
+                  </select>
+                  <button
+                    className="btn btn-primary"
+                    onClick={() => handleAssign(ticket._id, assignedDept[ticket._id])}
+                    disabled={!assignedDept[ticket._id] || departmentsList.length === 0 || ticket.status === "Closed"}
+                  >
+                    Assign
+                  </button>
+                </div>
+                {departmentsList.length === 0 && (
+                  <small className="text-muted">
+                    Please add departments in the Departments section first.
+                  </small>
+                )}
               </div>
             )}
 
@@ -134,7 +180,7 @@ export default function Ticket({ isAdmin = false }) {
                 className="btn btn-sm btn-outline-primary"
                 onClick={() => toggleExpand(ticket.ticketNo)}
               >
-                {expandedTicket === ticket.ticketNo ? "Hide" : "View"}
+                {expandedTicket === ticket.ticketNo ? "Hide" : "View Details"}
               </button>
             </div>
           </div>

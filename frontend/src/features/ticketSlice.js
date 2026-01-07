@@ -101,7 +101,11 @@ const ticketSlice = createSlice({
     loading: false,
     error: null,
   },
-  reducers: {},
+  reducers: {
+    clearTicketError: (state) => {
+      state.error = null;
+    },
+  },
   extraReducers: (builder) => {
     builder
       // Add Ticket
@@ -165,4 +169,5 @@ const ticketSlice = createSlice({
   },
 });
 
+export const { clearTicketError } = ticketSlice.actions;
 export default ticketSlice.reducer;

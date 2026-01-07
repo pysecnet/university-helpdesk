@@ -5,7 +5,10 @@ import { adminOnly } from "../middleware/roleMiddleware.js";
 
 const router = express.Router();
 
-router.post("/ask", protect, askAI);
+// AI Assistant - PUBLIC (no authentication required)
+router.post("/ask", askAI);
+
+// Add Q&A - ADMIN ONLY
 router.post("/add", protect, adminOnly, addQA);
 
 export default router;

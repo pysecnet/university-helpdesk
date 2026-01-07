@@ -1,7 +1,7 @@
 import { createSlice, createAsyncThunk } from "@reduxjs/toolkit";
 import API_URL from "../api";
 
-const DEPTS_BASE = `${API_URL}/departments`; // ✅ Fixed endpoint
+const DEPTS_BASE = `${API_URL}/departments`;
 const getToken = () => localStorage.getItem("token");
 
 // =============================
@@ -12,12 +12,7 @@ export const fetchDepartments = createAsyncThunk(
   "departments/fetchAll",
   async (_, thunkAPI) => {
     try {
-      const token = getToken();
-      if (!token) throw new Error("No authentication token found");
-
-      const res = await fetch(DEPTS_BASE, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
+      const res = await fetch(DEPTS_BASE);
 
       const data = await res.json();
 
@@ -25,9 +20,12 @@ export const fetchDepartments = createAsyncThunk(
         throw new Error(data.message || "Failed to fetch departments");
       }
 
-      return data || []; // ✅ return array directly
+      console.log("✅ Departments fetched:", data); // Debug log
+      
+      // ✅ Backend returns { departments: [...] }
+      return data.departments || [];
     } catch (err) {
-      console.error("Fetch Departments Error:", err);
+      console.error("❌ Fetch Departments Error:", err);
       return thunkAPI.rejectWithValue(
         err.message || "Failed to fetch departments"
       );
@@ -41,7 +39,7 @@ export const fetchDepartments = createAsyncThunk(
 const departmentSlice = createSlice({
   name: "departments",
   initialState: {
-    departments: [],
+    departments: [], // ✅ Always an array
     loading: false,
     error: null,
   },
@@ -60,11 +58,14 @@ const departmentSlice = createSlice({
       })
       .addCase(fetchDepartments.fulfilled, (state, action) => {
         state.loading = false;
-        state.departments = action.payload; // ✅ payload handled correctly
+        // ✅ Ensure it's always an array
+        state.departments = Array.isArray(action.payload) ? action.payload : [];
+        console.log("✅ Departments stored in state:", state.departments);
       })
       .addCase(fetchDepartments.rejected, (state, action) => {
         state.loading = false;
         state.error = action.payload;
+        state.departments = []; // ✅ Reset to empty array on error
       });
   },
 });

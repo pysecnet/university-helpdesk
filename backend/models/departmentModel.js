@@ -4,7 +4,7 @@ const departmentSchema = new mongoose.Schema(
   {
     name: {
       type: String,
-      required: true,
+      required: [true, "Department name is required"],
       unique: true,
       trim: true,
     },
@@ -18,4 +18,5 @@ const departmentSchema = new mongoose.Schema(
 );
 
 const Department = mongoose.model("Department", departmentSchema);
+
 export default Department;

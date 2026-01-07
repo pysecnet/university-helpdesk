@@ -13,6 +13,7 @@ export default function Assistant() {
     },
   ]);
   const [input, setInput] = useState("");
+  const [isTyping, setIsTyping] = useState(false);
   const bottomRef = useRef(null);
 
   // Auto-scroll to latest message
@@ -34,6 +35,7 @@ export default function Assistant() {
     };
     setMessages((prev) => [...prev, userMsg]);
     setInput("");
+    setIsTyping(true);
 
     try {
       const res = await fetch("http://localhost:5000/api/assistant/ask", {
@@ -46,6 +48,7 @@ export default function Assistant() {
       const botMsg = {
         sender: "bot",
         text: data.answer || "Sorry, I couldn't find an answer for that.",
+        source: data.source, // ✅ Track source
         time: new Date().toLocaleTimeString([], {
           hour: "2-digit",
           minute: "2-digit",
@@ -63,6 +66,8 @@ export default function Assistant() {
         }),
       };
       setMessages((prev) => [...prev, botErrorMsg]);
+    } finally {
+      setIsTyping(false);
     }
   };
 
@@ -98,11 +103,31 @@ export default function Assistant() {
                 }
               >
                 <p>{msg.text}</p>
-                <div className={styles.date}>{msg.time}</div>
+                <div className={styles.date}>
+                  {msg.time}
+                  {/* ✅ Show source badge */}
+                  {msg.source && (
+                    <span className={styles.sourceBadge}>
+                      {msg.source === "database" ? "📚 KB" : "🤖 AI"}
+                    </span>
+                  )}
+                </div>
               </div>
             </div>
           </div>
         ))}
+        
+        {isTyping && (
+          <div className={styles.robocontainer}>
+            <div className={styles.robosection}>
+              <i className={`bi bi-robot ${styles.roboicon}`}></i>
+              <div className={styles.robopara}>
+                <p className={styles.typing}>Typing...</p>
+              </div>
+            </div>
+          </div>
+        )}
+        
         <div ref={bottomRef}></div>
       </div>
 
@@ -114,8 +139,13 @@ export default function Assistant() {
           value={input}
           onChange={(e) => setInput(e.target.value)}
           onKeyDown={(e) => e.key === "Enter" && handleSend()}
+          disabled={isTyping}
         />
-        <button className={styles.btn} onClick={handleSend}>
+        <button 
+          className={styles.btn} 
+          onClick={handleSend}
+          disabled={isTyping}
+        >
           <i className={`bi bi-send ${styles.sendicon}`}></i>
         </button>
       </div>

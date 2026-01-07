@@ -20,22 +20,22 @@ export const registerUser = async (req, res) => {
       gender = "Other",
       dob,
       address = "",
-      role,
-      departmentName = "",
+      role = "student", // ✅ Default to student
+      departmentId = null, // ✅ Accept departmentId instead of departmentName
     } = req.body;
 
     // Check required fields
-    if (!fullname || !email || !password || !role) {
+    if (!fullname || !email || !password) {
       return res
         .status(400)
         .json({ message: "Please provide all required fields" });
     }
 
-    // If role is department, departmentName is required
-    if (role === "department" && !departmentName) {
+    // If role is department, departmentId is required
+    if (role === "department" && !departmentId) {
       return res
         .status(400)
-        .json({ message: "Department name is required for role 'department'" });
+        .json({ message: "Department is required for role 'department'" });
     }
 
     // Check if user already exists
@@ -55,7 +55,7 @@ export const registerUser = async (req, res) => {
       dob: dob ? new Date(dob) : undefined,
       address,
       role,
-      departmentName,
+      departmentId, // ✅ Store departmentId reference
     });
 
     // Generate token
@@ -68,7 +68,7 @@ export const registerUser = async (req, res) => {
         fullname: user.fullname,
         email: user.email,
         role: user.role,
-        departmentName: user.departmentName || null,
+        departmentId: user.departmentId || null,
       },
       token,
     });
@@ -105,7 +105,7 @@ export const loginUser = async (req, res) => {
         fullname: user.fullname,
         email: user.email,
         role: user.role,
-        departmentName: user.departmentName || null,
+        departmentId: user.departmentId || null,
       },
       token,
     });
@@ -136,7 +136,7 @@ export const getProfile = async (req, res) => {
 export const getAllDepartments = async (req, res) => {
   try {
     const departments = await User.find({ role: "department" }).select(
-      "fullname email departmentName"
+      "fullname email departmentId"
     );
     if (!departments.length)
       return res.status(404).json({ message: "No departments found" });

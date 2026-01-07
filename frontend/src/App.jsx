@@ -10,6 +10,7 @@ import Footer from "./Componenets/Footer/Footer";
 import Home from "./Pages/Home/Home";
 import AI from "./Pages/Assistant/Assistant";
 import Signup from "./Pages/Signup/Signup";
+import DepartmentSignup from "./Pages/DepartmentSignup/DepartmentSignup"; // ✅ New import
 import Login from "./Pages/Login/Login";
 import StudentDashboard from "./Pages/StudentDashboard/StudentDashboard";
 import AdminDashboard from "./Pages/AdminDashboard/AdminDashboard";
@@ -34,6 +35,10 @@ function App() {
           <Route
             path="/signup"
             element={!user ? <Signup /> : <Navigate to="/" replace />}
+          />
+          <Route
+            path="/department-signup"
+            element={!user ? <DepartmentSignup /> : <Navigate to="/" replace />}
           />
           <Route
             path="/login"

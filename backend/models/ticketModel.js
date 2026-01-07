@@ -41,7 +41,7 @@ const ticketSchema = new mongoose.Schema(
     // Ticket status
     status: {
       type: String,
-      enum: ["Open", "Assigned", "In Progress", "Closed"],
+      enum: ["Open", "Assigned", "In Progress", "Closed"], // ✅ Added "Assigned"
       default: "Open",
     },
 
@@ -49,7 +49,7 @@ const ticketSchema = new mongoose.Schema(
     assignedDepartment: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "Department",
-      default: null, // ensures proper reference
+      default: null,
     },
 
     // Who handled it (optional)

@@ -76,6 +76,9 @@ const departmentTicketSlice = createSlice({
       state.error = null;
       state.successMessage = null;
     },
+    clearSuccessMessage: (state) => {
+      state.successMessage = null;
+    },
   },
   extraReducers: (builder) => {
     builder
@@ -94,24 +97,35 @@ const departmentTicketSlice = createSlice({
       })
       // Update ticket status
       .addCase(updateTicketStatus.pending, (state) => {
-        state.loading = true;
         state.error = null;
         state.successMessage = null;
       })
       .addCase(updateTicketStatus.fulfilled, (state, action) => {
-        state.loading = false;
-        state.successMessage = "Ticket status updated successfully";
+        state.successMessage = "Status updated successfully";
 
-        // Update ticket in state
-        const index = state.tickets.findIndex(
+        // ✅ Update ticket in state immediately
+        const ticketArray = Array.isArray(state.tickets) 
+          ? state.tickets 
+          : state.tickets?.tickets || [];
+          
+        const index = ticketArray.findIndex(
           (t) => t._id === action.payload._id
         );
+        
         if (index !== -1) {
-          state.tickets[index] = action.payload;
+          if (Array.isArray(state.tickets)) {
+            state.tickets[index] = action.payload;
+          } else {
+            state.tickets.tickets[index] = action.payload;
+          }
         }
+
+        // ✅ Clear success message after 3 seconds
+        setTimeout(() => {
+          state.successMessage = null;
+        }, 3000);
       })
       .addCase(updateTicketStatus.rejected, (state, action) => {
-        state.loading = false;
         state.error = action.payload;
       });
   },
@@ -120,5 +134,5 @@ const departmentTicketSlice = createSlice({
 // =============================
 // 🚀 Exports
 // =============================
-export const { clearDepartmentTicketState } = departmentTicketSlice.actions;
+export const { clearDepartmentTicketState, clearSuccessMessage } = departmentTicketSlice.actions;
 export default departmentTicketSlice.reducer;
