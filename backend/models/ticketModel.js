@@ -12,10 +12,10 @@ const ticketSchema = new mongoose.Schema(
 
     description: { type: String, required: true, trim: true },
 
-    // Auto-increment ticket number (auto-generated)
+    // Auto-increment ticket number
     ticketNo: { type: Number, unique: true },
 
-    // Student info
+    // Student contact info
     studentEmail: {
       type: String,
       required: true,
@@ -31,6 +31,21 @@ const ticketSchema = new mongoose.Schema(
       match: [/^0\d{3}-\d{7}$/, "Enter valid phone number (e.g. 0316-3280715)"],
     },
 
+    // Student identification
+    studentRollNumber: {
+      type: String,
+      required: true,
+      uppercase: true,
+    },
+    studentDepartment: {
+      type: String,
+      uppercase: true,
+      enum: ["CS", "IT", "EE", "ME", "CE"],
+    },
+    studentYear: {
+      type: String,
+    },
+
     // Linked user who created the ticket
     createdBy: {
       type: mongoose.Schema.Types.ObjectId,
@@ -41,7 +56,7 @@ const ticketSchema = new mongoose.Schema(
     // Ticket status
     status: {
       type: String,
-      enum: ["Open", "Assigned", "In Progress", "Closed"], // ✅ Added "Assigned"
+      enum: ["Open", "Assigned", "In Progress", "Closed"],
       default: "Open",
     },
 
@@ -64,14 +79,14 @@ const ticketSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
-// ✅ Auto-increment ticket number before saving
+// Auto-increment ticket number before saving
 ticketSchema.pre("save", async function (next) {
   if (this.isNew && !this.ticketNo) {
     try {
       const lastTicket = await this.constructor
         .findOne()
         .sort({ ticketNo: -1 });
-      this.ticketNo = lastTicket ? lastTicket.ticketNo + 1 : 1001; // start from 1001
+      this.ticketNo = lastTicket ? lastTicket.ticketNo + 1 : 1001;
     } catch (err) {
       console.error("Error generating ticket number:", err);
     }

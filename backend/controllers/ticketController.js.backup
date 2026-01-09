@@ -43,9 +43,10 @@ export const getMyTickets = async (req, res) => {
       return res.status(403).json({ message: "Student access only" });
     }
 
-    const tickets = await Ticket.find({ createdBy: req.user._id }).sort({
-      createdAt: -1,
-    });
+    const tickets = await Ticket.find({ createdBy: req.user._id })
+      .populate("assignedDepartment", "name")
+      .sort({ createdAt: -1 });
+    
     res.json({ tickets });
   } catch (error) {
     console.error("Get My Tickets error:", error.message);
@@ -62,7 +63,11 @@ export const getAllTickets = async (req, res) => {
       return res.status(403).json({ message: "Admin access only" });
     }
 
-    const tickets = await Ticket.find().populate("createdBy", "name email");
+    const tickets = await Ticket.find()
+      .populate("createdBy", "name email")
+      .populate("assignedDepartment", "name")
+      .sort({ createdAt: -1 });
+    
     res.json({ tickets });
   } catch (error) {
     console.error("Get All Tickets error:", error.message);
@@ -89,14 +94,14 @@ export const assignTicketToDepartment = async (req, res) => {
     const ticket = await Ticket.findById(ticketId);
     if (!ticket) return res.status(404).json({ message: "Ticket not found" });
 
+    // ✅ Update ticket with department and change status to "Assigned"
     ticket.assignedDepartment = departmentId;
     ticket.status = "Assigned";
     await ticket.save();
 
-    const populatedTicket = await Ticket.findById(ticketId).populate(
-      "assignedDepartment",
-      "name"
-    );
+    const populatedTicket = await Ticket.findById(ticketId)
+      .populate("assignedDepartment", "name")
+      .populate("createdBy", "name email");
 
     res.json({
       message: "Ticket assigned successfully",
@@ -117,10 +122,17 @@ export const getDepartmentTickets = async (req, res) => {
       return res.status(403).json({ message: "Department access only" });
     }
 
-    // Filter tickets by the user's assigned department
+    console.log("👤 User:", req.user);
+    console.log("🏢 Department ID:", req.user.departmentId);
+
+    // ✅ Filter tickets by the user's assigned department
     const tickets = await Ticket.find({
       assignedDepartment: req.user.departmentId,
-    }).sort({ createdAt: -1 });
+    })
+      .populate("createdBy", "name email")
+      .sort({ createdAt: -1 });
+
+    console.log("🎫 Found tickets:", tickets.length);
 
     res.json({ tickets });
   } catch (error) {
@@ -137,23 +149,54 @@ export const updateTicketStatus = async (req, res) => {
     const { ticketId } = req.params;
     const { status } = req.body;
 
+    console.log("🔄 Update Status Request:", {
+      ticketId,
+      status,
+      userRole: req.user.role,
+      userDepartmentId: req.user.departmentId,
+    });
+
     const ticket = await Ticket.findById(ticketId);
     if (!ticket) return res.status(404).json({ message: "Ticket not found" });
 
-    if (
-      req.user.role === "department" &&
-      ticket.assignedDepartment?.toString() !== req.user.departmentId
-    ) {
-      return res
-        .status(403)
-        .json({ message: "Department not authorized to update this ticket" });
+    // ✅ Authorization Check
+    if (req.user.role === "department") {
+      // Check if this department is assigned to this ticket
+      if (!ticket.assignedDepartment) {
+        return res.status(403).json({ 
+          message: "This ticket is not assigned to any department yet" 
+        });
+      }
+
+      if (ticket.assignedDepartment.toString() !== req.user.departmentId.toString()) {
+        return res.status(403).json({
+          message: "You are not authorized to update this ticket",
+        });
+      }
+
+      // ✅ Department can only set "In Progress" or "Closed"
+      if (!["In Progress", "Closed"].includes(status)) {
+        return res.status(400).json({
+          message: "Department can only set status to 'In Progress' or 'Closed'",
+        });
+      }
+    } else if (req.user.role !== "admin") {
+      return res.status(403).json({ message: "Access denied" });
     }
 
+    // ✅ Update status
     ticket.status = status;
     if (status === "Closed") ticket.resolvedAt = new Date();
     await ticket.save();
 
-    res.json({ message: "Status updated successfully", ticket });
+    const populatedTicket = await Ticket.findById(ticketId)
+      .populate("assignedDepartment", "name")
+      .populate("createdBy", "name email");
+
+    res.json({ 
+      message: "Status updated successfully", 
+      ticket: populatedTicket 
+    });
   } catch (error) {
     console.error("Update Ticket Status error:", error.message);
     res.status(500).json({ message: "Server error" });
